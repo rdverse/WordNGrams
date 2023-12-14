@@ -21,32 +21,29 @@ def read_text_file(file_path):
 
 def split_text_by_sentence(text):
     text = text.replace("\n", "")
+    text = re.sub(r'\s+', ' ', text)  
     sentence_endings = r'[.?:]'
     # Split the text into sentences and add sentence markers
     sentences = re.split(sentence_endings, text)
+    # trim sentences - whitespace    
+    #sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+    #print(sentences)
+    #print(sentences)
     return sentences
 
 # Function to add sentence markers to the text
-def add_sentence_markers(sentences):
+def add_sentence_markers(sentences, n):
     """
     Add sentence markers <s> and </s> at the beginning and end of each sentence.
 
     Args:
         text (str): Input text
-
+        n (int) : n-gram
     Returns:
         str: Text with sentence markers added.
     """
-    
-    # Define a regular expression pattern to identify sentence endings
-    #text_sentences = ['<s>' + sentence + '</s>' \
-    #             for sentence in text]
-    [sentence.insert(0, "<s>") for sentence in sentences]
-    [sentence.append("</s>") for sentence in sentences]
+    return [['<s>']*(n-1) + sentence + ['</s>']*(n-1) for sentence in sentences]
 
-    # Concatenate the cleaned sentences
-    #cleaned_text = ' '.join(sentences)
-    return sentences
  
 
 # Function to replace em-dashes with spaces
@@ -97,8 +94,12 @@ def tokenize_and_remove_special_characters(sentences):
     tokens = [re.split(token_pattern, sentence) for sentence in sentences]
     return tokens 
 
+def remove_empty_strings(sentences):
+    sentences = [[word for word in sentence if word] for sentence in sentences if any(sentence)]
+    sentences = [sentence for sentence in sentences if len(sentence)>3]
+    return sentences
 # Main function to perform data cleanup
-def data_cleanup(file_path):
+def data_cleanup(file_path, n):
     """
     Perform data cleanup on the text from the specified file.
 
@@ -123,6 +124,7 @@ def data_cleanup(file_path):
     cleaned_tokens = tokenize_and_remove_special_characters(text)
     # Add sentence markers
     #print(cleaned_tokens)
-    final_tokens = add_sentence_markers(cleaned_tokens)
-
+    cleaned_tokens = add_sentence_markers(cleaned_tokens, n)
+     
+    final_tokens = remove_empty_strings(cleaned_tokens) 
     return final_tokens#,#cleaned_tokens

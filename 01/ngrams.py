@@ -1,8 +1,9 @@
 from data_utils import *
 import os
- 
+import re
+from itertools import chain, tee, islice
 class NGramTextGenerator:
-    def __init__(self, file_path, text, n):
+    def __init__(self, cleaned_text, n):
         """
         Initialize the NGramTextGenerator with the input text and n-gram size.
 
@@ -10,37 +11,130 @@ class NGramTextGenerator:
             text (str): Input text.
             n (int): Size of the n-grams (e.g., 1 for unigrams, 2 for bigrams).
         """
-        self.file_path = file_path
         self.n = n
-        self.text = self._preprocess_text(text)
+        self.text = cleaned_text#_preprocess_text(text)
+        self.world, self.vocab = self.get_vocab(self.text)
         self.ngrams = self._build_ngrams()
 
-    def _preprocess_text(self, text):
-        # Data cleanup as per your instructions
-        # text = text.replace("—", " ")  # Replace em-dashes with spaces
-        # text = text.lower()  # Convert to lowercase
-        # text = re.sub(r"[^a-z0-9\s'-]", "", text)  # Remove special characters
-        cleaned_tokens = data_cleanup(self.file_path)
-        #print(cleaned_tokens)
-        return cleaned_tokens 
+    # def _preprocess_text(self, text):
+    #     # Data cleanup as per your instructions
+    #     # text = text.replace("—", " ")  # Replace em-dashes with spaces
+    #     # text = text.lower()  # Convert to lowercase
+    #     # text = re.sub(r"[^a-z0-9\s'-]", "", text)  # Remove special characters
+    #     cleaned_tokens = self.text#data_cleanup(self.file_path)
+    #     #print(cleaned_tokens)
+    #     return cleaned_tokens 
 
+    # def _build_ngrams(self):
+    #     from itertools import tee, islice
+    #     ngrams = defaultdict(int)
+    #     for sentence in self.text:
+    #         # Add sentence start and end markers
+    #         sentence = ['<s>'] * (self.n - 1) + sentence + ['</s>']
+            
+    #         # Create n iterators for the sentence
+    #         sentence_iters = tee(sentence, self.n)
+            
+    #         # Offset each iterator by an increasing number
+    #         for i in range(1, self.n):
+    #             sentence_iters[i] = islice(sentence_iters[i], i, None)
+            
+    #         # Zip the iterators to get n-grams and count them
+    #         for ngram in zip(*sentence_iters):
+    #             ngrams[ngram] += 1
+
+    #     return ngrams
+    
+
+    # def _build_ngrams(self):
+    #     from collections import defaultdict
+    #     from itertools import tee, islice
+    #     ngrams = defaultdict(int)
+    #     for sentence in self.text:
+    #         # Add sentence start and end markers
+    #         sentence = ['<s>'] * (self.n - 1) + sentence + ['</s>']
+            
+    #         # Create n iterators for the sentence and convert them to a list
+    #         sentence_iters = list(tee(sentence, self.n))
+            
+    #         # Offset each iterator by an increasing number
+    #         for i in range(1, self.n):
+    #             sentence_iters[i] = islice(sentence_iters[i], i, None)
+            
+    #         # Zip the iterators to get n-grams and count them
+    #         for ngram in zip(*sentence_iters):
+    #             ngrams[ngram] += 1
+    #     print(ngrams)
+    #     return ngrams
+    
     def _build_ngrams(self):
-        # source : https://github.com/nltk/nltk/blob/develop/nltk/util.py
-        ngrams = defaultdict(int)
-        #print(self.text)
-        #words = self.text.split()
-        sentences = self.text
-        # for i in range(len(words) - self.n + 1):
-        #     print(words[i:i + self.n])
-        #     ngram = tuple(words[i:i + self.n])
-        #     ngrams[ngram[:-1]].append(ngram[-1])
-        for sentence in sentences:
-            for word in sentence:
-                ngrams[word] += 1
-        #print(ngrams)
+        # adapted from https://github.com/nltk/nltk/blob/develop/nltk/util.py
+        ngrams = defaultdict(lambda: defaultdict(int))
+        for sentence in self.text:
+            # Add sentence start and end markers
+            sentence = ['<s>'] * (self.n - 1) + sentence + ['</s>']
+            
+            # Create n iterators for the sentence and convert them to a list
+            sentence_iters = list(tee(sentence, self.n))
+            
+            # Offset each iterator by an increasing number
+            for i in range(1, self.n):
+                sentence_iters[i] = islice(sentence_iters[i], i, None)
+            
+            # Zip the iterators to get n-grams and count them
+            for ngram in zip(*sentence_iters):
+                context, target = tuple(ngram[:-1]), ngram[-1]
+                ngrams[context][target] += 1
+        print(ngrams)
         return ngrams
 
-    def generate_sentence(self, max_length=10000):
+    # def _build_ngrams(self):
+    #     ngrams = defaultdict(int)
+    #     #print(self.text)
+    #     #words = self.text.split()
+    #     sentences = self.text
+    #     # for i in range(len(words) - self.n + 1):
+    #     #     print(words[i:i + self.n])
+    #     #     ngram = tuple(words[i:i + self.n])
+    #     #     ngrams[ngram[:-1]].append(ngram[-1])
+    #     #vocab = []
+    #     from itertools import tee
+    #     for sentence in sentences:
+    #         sentence = tee(sentence,self.n)
+    #         for i, sentence_iter in enumerate(sentence):
+    #             for _ in range(i):
+    #                 next(sentence_iter, None)
+    #             #print(sentence)
+    #                 print(sentence_iter)
+                    
+    #             print(list(zip(*sentence)))
+    #     #print(sentences)
+    #             #ngrams[word] += 1
+    #     #print(ngrams)
+    #     return ngrams
+
+
+    def get_nested_value(data, key_path):
+        """
+        Extracts a value from a nested dictionary given a list of keys.
+        
+        :param data: The nested dictionary to search.
+        :param key_path: A list of keys representing the path to the desired value.
+        :return: The extracted value, or None if the path is invalid.
+        """
+        try:
+            for key in key_path:
+                data = data[key]
+            return data
+        except KeyError:
+            return None
+        
+    def get_vocab(self,world):
+        world = list(chain.from_iterable(world))
+        vocab = set(world)
+        return world,vocab
+        
+    def generate_sentence(self, max_length=15):
         """
         Generate a random sentence based on raw n-gram counts.
 
@@ -50,14 +144,35 @@ class NGramTextGenerator:
         Returns:
             str: Generated sentence.
         """
-        sentence = ["<s>"]
+        
+        context = ["<s>"]*(self.n-1)
+        sentence = context 
         #print(sentence)
         while sentence[-1] != "</s>" and len(sentence) < max_length:
-            choice = random.sample(list(self.ngrams.values()),1)   
-            words_choice = [word for word, count in self.ngrams.items() if count == choice[0]]
-            next_word = random.sample(words_choice, 1)
-            sentence.append(next_word[0])
-            # current_ngram = tuple(sentence[-self.n + 1:])
+            #if n!==1:
+                #world = self.ngrams.get(tuple(sentence[-self.n + 1:]), [])
+             #   world = self.ngrams.items()
+            #word_frequency = list(chain.from_iterable([[key]*value for key, value in world]))
+            if self.n==1:
+                word_choice = random.choices(list(self.ngrams.keys()),
+                                            weights=list(self.ngrams.values()),
+                                            k=1)
+            
+                next_word = word_choice[0]
+            else:
+                # get all the possible words in n-gram given the context
+                potential_words = self.ngrams.get(tuple(sentence[-self.n + 1:]), [])
+                # sort them based on frequency
+                sorted_words = sorted(potential_words, key=lambda x: self.ngrams[(tuple(sentence[-self.n + 1:]), x)], reverse=True)
+                # select next word and context word  
+                next_word = random.choices(sorted_words[:10], weights=[self.ngrams[(tuple(sentence[-self.n + 1:]), x)] for x in sorted_words[:10]], k=1)[0]
+                
+            sentence.append(next_word) 
+            #print(choice)
+            #words_choice = [word for word, count in self.ngrams.items() if count == choice[0]]
+            #choice = random.sample(list(self.ngrams.keys()))
+            #next_word = random.sample(words_choice, 1)
+                        # current_ngram = tuple(sentence[-self.n + 1:])
             # #print(current_ngram)
             # #print(current_ngram)
             # next_word_options = self.ngrams.get(current_ngram, [])
@@ -66,10 +181,15 @@ class NGramTextGenerator:
             #     sentence.append(next_word)
             # else:
             #     break
-        print(len(sentence))
+        #print(sentence)
         #sentence = " ".join(sentence)
         #print(sentence)
-        return sentence # Exclude <s> and </s>
+        clean_sentence = " ".join(sentence)
+        clean_sentence = re.sub("<s> ","",clean_sentence)
+        clean_sentence = re.sub("<s>","",clean_sentence)
+        clean_sentence = re.sub("</s>","",clean_sentence)
+        #print(clean_sentence)
+        return clean_sentence # Exclude <s> and </s>
 
 def generate_text_with_ngrams(text, n):
     """
