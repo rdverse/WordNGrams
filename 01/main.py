@@ -3,7 +3,7 @@ from ngrams import *
 
 if __name__=="__main__":
     file_path = 'pg74.txt'  # Replace with the path to your text file
-    n=2
+    n=6
     cleaned_tokens = data_cleanup(file_path, n)
     #print(cleaned_tokens)
     corpus = []

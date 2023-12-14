@@ -3,7 +3,7 @@ import os
 import re
 from itertools import chain, tee, islice
 class NGramTextGenerator:
-    def __init__(self, cleaned_text, n):
+    def __init__(self, cleaned_text, n, laplace_smoothing=True):
         """
         Initialize the NGramTextGenerator with the input text and n-gram size.
 
@@ -15,6 +15,7 @@ class NGramTextGenerator:
         self.text = cleaned_text#_preprocess_text(text)
         self.world, self.vocab = self.get_vocab(self.text)
         self.ngrams = self._build_ngrams()
+        self.laplace_smoothing = laplace_smoothing
     # def _preprocess_text(self, text):
     #     # Data cleanup as per your instructions
     #     # text = text.replace("—", " ")  # Replace em-dashes with spaces
@@ -66,7 +67,7 @@ class NGramTextGenerator:
     #     print(ngrams)
     #     return ngrams
     
-    def _build_ngrams(self, laplace_smoothing=True):
+    def _build_ngrams(self):
         # adapted from https://github.com/nltk/nltk/blob/develop/nltk/util.py
         ngrams = defaultdict(lambda: defaultdict(int))
         for sentence in self.text:
@@ -84,13 +85,13 @@ class NGramTextGenerator:
             for ngram in zip(*sentence_iters):
                 context, target = tuple(ngram[:-1]), ngram[-1]
                 ngrams[context][target] += 1
-        
-        if laplace_smoothing:
-            # Add 1 to all n-gram counts
-            import tqdm
-            for context in tqdm.tqdm(ngrams):
-                for token in self.vocab:
-                    ngrams[context][token] += 1
+        # too slow        
+        # if laplace_smoothing:
+        #     # Add 1 to all n-gram counts
+        #     import tqdm
+        #     for context in tqdm.tqdm(ngrams):
+        #         for token in self.vocab:
+        #             ngrams[context][token] += 1
                     
         #print(ngrams)
         return ngrams
@@ -166,16 +167,24 @@ class NGramTextGenerator:
             
                 next_word = word_choice[0]
             else:
+                
+                context = tuple(sentence[-self.n + 1:])
                 # get all the possible words in n-gram given the context
                 print(sentence)
-                potential_words = self.ngrams.get(tuple(sentence[-self.n + 1:]), [])
-                # sort them based on frequency
-                #print(potential_words)
-                #sorted_words = sorted(potential_words, key= potential_words.get, reverse=True)
-                #print(sorted_words)
-                # select next word and context word  
-                #next_word = random.choices(sorted_words.keys(), weights=[self.ngrams[(tuple(sentence[-self.n + 1:]), x)] for x in sorted_words[:10]], k=1)[0]
-                next_word = random.choices(list(potential_words.keys()), weights=list(potential_words.values()) ,k=1)[0]
+                if self.laplace_smoothing:
+                    #Implement lazy loading to speed up the process
+                    potential_dict = {word:self.ngrams[context].get(word, 0)+1 for word in self.vocab}
+                    next_word = random.choices(list(potential_dict.keys()), weights=potential_dict.values(), k=1)[0]
+                    potential_words = self.vocab
+                else:    
+                    potential_words = self.ngrams.get(context, [])
+                    # sort them based on frequency
+                    #print(potential_words)
+                    #sorted_words = sorted(potential_words, key= potential_words.get, reverse=True)
+                    #print(sorted_words)
+                    # select next word and context word  
+                    #next_word = random.choices(sorted_words.keys(), weights=[self.ngrams[(tuple(sentence[-self.n + 1:]), x)] for x in sorted_words[:10]], k=1)[0]
+                    next_word = random.choices(list(potential_words.keys()), weights=list(potential_words.values()) ,k=1)[0]
 
             sentence.append(next_word) 
             #print(choice)
