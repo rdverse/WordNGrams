@@ -36,7 +36,12 @@ To set up the NLP2 project, follow these steps:
 
     To use the environment in Jupyter Notebook, select "nlppy" from the Kernel menu.
 
-4. **How to run
+4. **How to run:**
+    ```
+    python3 main.py
+    ```
+
+
 ## Google Colab Notebook
 
 Here is the link to the Colab notebook:

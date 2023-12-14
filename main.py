@@ -1,19 +1,20 @@
-from data_utils import *
-from ngrams import *
+import os
+import logging
+from data_utils import TextProcessor
+from ngrams import NGramTextGenerator, generate_text_with_ngrams
 
 if __name__=="__main__":
     
     print("#"*100)
     if not os.path.exists('logs'):
         os.makedirs('logs')
-    logging.basicConfig(level=logging.INFO, 
-                        filename='logs\logs.log',
+    logging.basicConfig(level=logging.DEBUG, 
+                        filename='logs/logs.log',
                         filemode='w',
                         format='%(asctime)s - %(levelname)s - %(message)s')
     
     file_path = 'data/pg74.txt'  # Replace with the path to your text file
     print(f"Reading file : {file_path}") 
-    
     
     for n in range(1, 7):
         for laplace in [True, False]:

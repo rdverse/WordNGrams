@@ -1,11 +1,10 @@
-from data_utils import *
-import os
 import re
-from itertools import chain, tee, islice
-import warnings
-import logging
+import os
 import time
-import pickle
+import random
+import logging
+from collections import defaultdict
+from itertools import chain, tee, islice
 
 class NGramTextGenerator:
     def __init__(self, cleaned_text="", n=1, laplace_smoothing=True):
