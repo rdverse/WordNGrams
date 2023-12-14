@@ -15,7 +15,6 @@ class NGramTextGenerator:
         self.text = cleaned_text#_preprocess_text(text)
         self.world, self.vocab = self.get_vocab(self.text)
         self.ngrams = self._build_ngrams()
-
     # def _preprocess_text(self, text):
     #     # Data cleanup as per your instructions
     #     # text = text.replace("—", " ")  # Replace em-dashes with spaces
@@ -67,7 +66,7 @@ class NGramTextGenerator:
     #     print(ngrams)
     #     return ngrams
     
-    def _build_ngrams(self):
+    def _build_ngrams(self, laplace_smoothing=True):
         # adapted from https://github.com/nltk/nltk/blob/develop/nltk/util.py
         ngrams = defaultdict(lambda: defaultdict(int))
         for sentence in self.text:
@@ -85,7 +84,15 @@ class NGramTextGenerator:
             for ngram in zip(*sentence_iters):
                 context, target = tuple(ngram[:-1]), ngram[-1]
                 ngrams[context][target] += 1
-        print(ngrams)
+        
+        if laplace_smoothing:
+            # Add 1 to all n-gram counts
+            import tqdm
+            for context in tqdm.tqdm(ngrams):
+                for token in self.vocab:
+                    ngrams[context][token] += 1
+                    
+        #print(ngrams)
         return ngrams
 
     # def _build_ngrams(self):
@@ -112,7 +119,6 @@ class NGramTextGenerator:
     #             #ngrams[word] += 1
     #     #print(ngrams)
     #     return ngrams
-
 
     def get_nested_value(data, key_path):
         """
@@ -161,12 +167,16 @@ class NGramTextGenerator:
                 next_word = word_choice[0]
             else:
                 # get all the possible words in n-gram given the context
+                print(sentence)
                 potential_words = self.ngrams.get(tuple(sentence[-self.n + 1:]), [])
                 # sort them based on frequency
-                sorted_words = sorted(potential_words, key=lambda x: self.ngrams[(tuple(sentence[-self.n + 1:]), x)], reverse=True)
+                #print(potential_words)
+                #sorted_words = sorted(potential_words, key= potential_words.get, reverse=True)
+                #print(sorted_words)
                 # select next word and context word  
-                next_word = random.choices(sorted_words[:10], weights=[self.ngrams[(tuple(sentence[-self.n + 1:]), x)] for x in sorted_words[:10]], k=1)[0]
-                
+                #next_word = random.choices(sorted_words.keys(), weights=[self.ngrams[(tuple(sentence[-self.n + 1:]), x)] for x in sorted_words[:10]], k=1)[0]
+                next_word = random.choices(list(potential_words.keys()), weights=list(potential_words.values()) ,k=1)[0]
+
             sentence.append(next_word) 
             #print(choice)
             #words_choice = [word for word, count in self.ngrams.items() if count == choice[0]]
@@ -219,6 +229,5 @@ def generate_text_with_ngrams(text, n):
     #     generated_text = generate_text_with_ngrams(input_text, n)
     #     print(f"\nGenerated Text (n={n}):")
     #     print(generated_text)
-
     # Task 3: Repeat step 2 using add-1 smoothing (not implemented here)
     # Task 4: Write up your findings (not implemented here)
