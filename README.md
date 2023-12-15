@@ -9,7 +9,7 @@ To set up the NLP2 project, follow these steps:
     Use the following command to clone the NLP2 repository:
 
     ```bash
-    git clone https://github.com/rdverse/NLP2.git
+    git clone https://github.com/rdverse/WordNGrams.git
     ```
 
 2. **Create a Conda Environment:**
